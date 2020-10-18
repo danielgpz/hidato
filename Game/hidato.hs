@@ -6,7 +6,7 @@ import qualified Game.Utils as U
 
 --A cell, just a pair of Int
 type Cell = (Int, Int)
-type InfoCell = (Cell, Maybe Int)
+type InfoCell = (Maybe Int, Cell)
 type MarkedCell = (Int, Cell)
 
 --A Hidato table, ocupied cells with numbers, free cells to be set, and the starting and ending numbers. 
@@ -16,8 +16,8 @@ data Hidato = Hid { mcells :: (IM.IntMap Cell), ucells :: (DS.Set Cell), start :
 fromList :: [(InfoCell)] -> Hidato
 fromList cells =
     let
-        mcells = IM.fromList [(v, c) | (c, Just v) <- cells]
-        ucells = DS.fromList [c | (c, Nothing) <- cells]
+        mcells = IM.fromList [(v, c) | (Just v, c) <- cells]
+        ucells = DS.fromList [c | (Nothing, c) <- cells]
         Just start = IM.lookupMin mcells
         Just end   = IM.lookupMax mcells
     in Hid mcells ucells start end
@@ -41,13 +41,6 @@ markCell cell (Hid mcells ucells start end) =
     where
         next = succ . fst $ start
 
--- markCell cell (Hid mcells ucells start end)
---     | IM.lookup next mcells == Just cell  = Just $ Hid mcells ucells (next, cell) end
---     | DS.member cell ucells               = Just $ Hid (IM.insert next cell mcells) (DS.delete cell ucells) (next, cell) end
---     | otherwise                           = Nothing
---     where
---         next = succ . fst $ start
-
 --Solver function, a trivial backtrack thats travel all posibles paths
 solveHidato :: Hidato -> [Hidato]
 solveHidato h
@@ -65,7 +58,7 @@ instance Read Hidato where
     readsPrec _ s = 
         let 
             table = U.stringToTable s
-            readrow row i = [((i, j), readCell c) | (c, j) <- zip row [1..], c /= "-"]
+            readrow row i = [(readCell c, (i, j)) | (c, j) <- zip row [1..], c /= "-"]
             cells = foldl1 (++) (zipWith readrow table [1..])
         in
             [(fromList cells, "")]
@@ -86,9 +79,9 @@ instance Show Hidato where
             U.tableToString $ map (fill_from 1) table
         where
             fill_from _ [] = []
-            fill_from i l@((p, c) : xs)
-                | i < snd p     = "-" : fill_from (i + 1) l
-                | otherwise = (putCell c) : fill_from (i + 1) xs
+            fill_from i l@((c, p) : xs)
+                | i < snd c     = "-" : fill_from (i + 1) l
+                | otherwise = (putCell p) : fill_from (i + 1) xs
 
             putCell Nothing = "+"
             putCell (Just p) = show p
