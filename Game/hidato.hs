@@ -16,11 +16,11 @@ data Hidato = Hid { mcells :: (IM.IntMap Cell), ucells :: (DS.Set Cell), start :
 fromList :: [(InfoCell)] -> Hidato
 fromList cells =
     let
-        mcells = [(v, c) | (c, Just v) <- cells]
-        ucells = [c | (c, Nothing) <- cells]
-        start  = minimum mcells
-        end    = maximum mcells
-    in Hid (IM.fromList mcells) (DS.fromList ucells) start end
+        mcells = IM.fromList [(v, c) | (c, Just v) <- cells]
+        ucells = DS.fromList [c | (c, Nothing) <- cells]
+        Just start = IM.lookupMin mcells
+        Just end   = IM.lookupMax mcells
+    in Hid mcells ucells start end
 
 directions :: [Cell]
 directions = [(0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]
@@ -30,21 +30,28 @@ getNeighbours (x, y) = map (\(v, w) -> (x + v, y + w)) directions
 
 --Just move on to the next cell and mark it, return a new hidato if move was legal
 markCell :: Cell -> Hidato -> Maybe Hidato
-markCell cell (Hid mcells ucells start end)
-    | IM.lookup next mcells == Just cell  = Just $ Hid mcells ucells (next, cell) end
-    | DS.member cell ucells               = Just $ Hid (IM.insert next cell mcells) (DS.delete cell ucells) (next, cell) end
-    | otherwise                           = Nothing
+markCell cell (Hid mcells ucells start end) =
+    case (IM.lookup next mcells) of
+        Just c -> 
+            if c == cell then Just $ Hid mcells ucells (next, cell) end
+            else Nothing
+        Nothing -> 
+            if DS.member cell ucells then Just $ Hid (IM.insert next cell mcells) (DS.delete cell ucells) (next, cell) end
+            else Nothing
     where
         next = succ . fst $ start
+
+-- markCell cell (Hid mcells ucells start end)
+--     | IM.lookup next mcells == Just cell  = Just $ Hid mcells ucells (next, cell) end
+--     | DS.member cell ucells               = Just $ Hid (IM.insert next cell mcells) (DS.delete cell ucells) (next, cell) end
+--     | otherwise                           = Nothing
+--     where
+--         next = succ . fst $ start
 
 --Solver function, a trivial backtrack thats travel all posibles paths
 solveHidato :: Hidato -> [Hidato]
 solveHidato h
-    | sc == ec = [h]
-    | s == e   = []
-    where
-        (s, sc) = start h
-        (e, ec) = end h
+    | start h == end h = [h]
 solveHidato h = backtrack . getNeighbours . snd . start $ h  
     where
         backtrack [] = []
