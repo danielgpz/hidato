@@ -1,4 +1,4 @@
-import qualified Data.List as DL
+import qualified Control.Monad as CM
 import qualified Game.Hidato as GH
 
 getLines :: IO [String]
@@ -26,5 +26,11 @@ main =
     do
         lines <- getLines2
         let hidato = (read lines) :: GH.Hidato
-        print hidato
+
+        putStrLn $ "Solving Hidato...\n"
+        let sols = GH.solveHidato hidato
+        
+        putStrLn $ "Found " ++ show (length sols) ++ " solution(s):\n"
+        CM.mapM print sols
+        
         getLine
