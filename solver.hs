@@ -1,4 +1,5 @@
 import qualified Control.Monad as CM
+import qualified Data.Time as DT
 import qualified Game.Hidato as GH
 
 getLines :: IO [String]
@@ -28,9 +29,14 @@ main =
         let hidato = (read lines) :: GH.Hidato
 
         putStrLn $ "Solving Hidato...\n"
-        let sols = GH.solveHidato hidato
+        stime <- DT.getCurrentTime
         
-        putStrLn $ "Found " ++ show (length sols) ++ " solution(s):\n"
+        let sols = GH.solveHidato hidato
         CM.mapM print sols
+        
+        
+        etime <- DT.getCurrentTime
+        let dtime = (DT.utctDayTime etime) - (DT.utctDayTime stime)
+        putStrLn $ "Found " ++ show (length sols) ++ " solution(s) in " ++ show dtime
         
         getLine
