@@ -1,3 +1,4 @@
+import qualified System.Environment as SE
 import qualified Control.Monad as CM
 import qualified Data.Time as DT
 import qualified Game.Hidato as GH
@@ -22,10 +23,18 @@ getLines2 =
             lines <- getLines2
             return (line ++ '\n':lines)
 
+getInput :: IO String
+getInput =
+    do
+        args <- SE.getArgs
+        case args of
+            []      -> getLines2
+            (arg:_) -> readFile arg
+
 
 main = 
     do
-        lines <- getLines2
+        lines <- getInput
         let hidato = (read lines) :: GH.Hidato
 
         putStrLn $ "Solving Hidato...\n"
