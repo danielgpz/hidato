@@ -31,7 +31,8 @@ main =
         putStrLn $ "Solving Hidato...\n"
         stime <- DT.getCurrentTime
         
-        let sols = GH.solveHidato hidato
+        -- let sols = [head (GH.solveHidato hidato)]
+        let sols = (GH.solveHidato hidato)
         CM.mapM print sols
         
         

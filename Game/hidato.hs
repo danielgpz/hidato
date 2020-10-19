@@ -23,21 +23,20 @@ fromList cells =
     in Hid mcells ucells start end
 
 directions :: [Cell]
-directions = [(0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]
+directions = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (1, -1), (-1, 1)]
 
 getNeighbours :: Cell -> [Cell]
 getNeighbours (x, y) = map (\(v, w) -> (x + v, y + w)) directions
 
 --Just move on to the next cell and mark it, return a new hidato if move was legal
 markCell :: Cell -> Hidato -> Maybe Hidato
-markCell cell (Hid mcells ucells start end) =
-    case (IM.lookup next mcells) of
-        Just c -> 
-            if c == cell then Just $ Hid mcells ucells (next, cell) end
-            else Nothing
-        Nothing -> 
-            if DS.member cell ucells then Just $ Hid (IM.insert next cell mcells) (DS.delete cell ucells) (next, cell) end
-            else Nothing
+markCell cell (Hid mcells ucells start end) = case (IM.lookup next mcells) of
+    Just c -> 
+        if c == cell then Just $ Hid mcells ucells (next, cell) end
+        else Nothing
+    Nothing -> 
+        if DS.member cell ucells then Just $ Hid (IM.insert next cell mcells) (DS.delete cell ucells) (next, cell) end
+        else Nothing
     where
         next = succ . fst $ start
 
@@ -45,13 +44,11 @@ markCell cell (Hid mcells ucells start end) =
 solveHidato :: Hidato -> [Hidato]
 solveHidato h
     | start h == end h = [h]
-solveHidato h = backtrack . getNeighbours . snd . start $ h  
+solveHidato h = concatMap backtrack . getNeighbours . snd . start $ h  
     where
-        backtrack [] = []
-        backtrack (c:cs) =
-            case markCell c h of
-                Just h  -> solveHidato h ++ backtrack cs
-                Nothing -> backtrack cs
+        backtrack c = case markCell c h of
+            Just h' -> solveHidato h'
+            Nothing -> []
 
 --Making Hidato friend of class Read for set custom read
 instance Read Hidato where
@@ -59,7 +56,7 @@ instance Read Hidato where
         let 
             table = U.stringToTable s
             readrow row i = [(readCell c, (i, j)) | (c, j) <- zip row [1..], c /= "-"]
-            cells = foldl1 (++) (zipWith readrow table [1..])
+            cells = concat (zipWith readrow table [1..])
         in
             [(fromList cells, "")]
         where
