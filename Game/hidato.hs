@@ -1,13 +1,8 @@
 module Game.Hidato(Hidato, fromList, solveHidato) where
-import qualified Data.List as DL
 import qualified Data.IntMap as IM
 import qualified Data.Set as DS
-import qualified Game.Utils as U
-
---A cell, just a pair of Int
-type Cell = (Int, Int)
-type InfoCell = (Maybe Int, Cell)
-type MarkedCell = (Int, Cell)
+import qualified Data.List as DL
+import Game.Utils(stringToTable, tableToString, Cell, InfoCell, MarkedCell, cellDistance, Direction, getNeighbours, genDirections)
 
 --A Hidato table, ocupied cells with numbers, free cells to be set, and the starting and ending numbers. 
 data Hidato = Hid { mcells :: (IM.IntMap Cell), ucells :: (DS.Set Cell), start :: MarkedCell, end :: MarkedCell }
@@ -22,15 +17,9 @@ fromList cells =
         Just end   = IM.lookupMax mcells
     in Hid mcells ucells start end
 
-directions :: [Cell]
-directions = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (1, -1), (-1, 1)]
-
-getNeighbours :: Cell -> [Cell]
-getNeighbours (x, y) = map (\(v, w) -> (x + v, y + w)) directions
-
---Just move on to the next cell and mark it, return a new hidato if move was legal
-markCell :: Cell -> Hidato -> Maybe Hidato
-markCell cell (Hid mcells ucells start end) = case (IM.lookup next mcells) of
+-- Just move on to the next cell and mark it, return a new hidato if move was legal
+markCell :: Cell -> Hidato -> Maybe Cell -> Maybe Hidato
+markCell cell (Hid mcells ucells start end) mc = case mc of
     Just c -> 
         if c == cell then Just $ Hid mcells ucells (next, cell) end
         else Nothing
@@ -40,21 +29,37 @@ markCell cell (Hid mcells ucells start end) = case (IM.lookup next mcells) of
     where
         next = succ . fst $ start
 
+-- markCell :: Cell -> Hidato -> MarkedCell -> Maybe Hidato
+-- markCell cell (Hid mcells ucells start end) (p, c)
+--     | cell == c && next == p = Just $ Hid mcells ucells (next, cell) end
+--     | dist > (p - next)      = Nothing
+--     | DS.member cell ucells  = Just $ Hid (IM.insert next cell mcells) (DS.delete cell ucells) (next, cell) end
+--     | otherwise              = Nothing
+--     where
+--         next = succ . fst $ start
+--         dist = cellDistance cell c
+
 --Solver function, a trivial backtrack thats travel all posibles paths
-solveHidato :: Hidato -> [Hidato]
-solveHidato h
+solveHidato' :: [Direction] -> Hidato -> [Hidato]
+solveHidato' _ h 
     | start h == end h = [h]
-solveHidato h = concatMap backtrack . getNeighbours . snd . start $ h  
+solveHidato' (dir:dirs) h = concatMap backtrack . getNeighbours dir $ cell
     where
-        backtrack c = case markCell c h of
-            Just h' -> solveHidato h'
+        (pos, cell)  = start $ h
+        mc = IM.lookup (succ pos) (mcells h)
+        -- Just mc = IM.lookupGE (succ pos) (mcells h)
+        backtrack c = case markCell c h mc of
+            Just h' -> solveHidato' dirs h'
             Nothing -> []
+
+solveHidato :: Hidato -> [Hidato]
+solveHidato = solveHidato' (genDirections 3461178)
 
 --Making Hidato friend of class Read for set custom read
 instance Read Hidato where
     readsPrec _ s = 
         let 
-            table = U.stringToTable s
+            table = stringToTable s
             readrow row i = [(readCell c, (i, j)) | (c, j) <- zip row [1..], c /= "-"]
             cells = concat (zipWith readrow table [1..])
         in
@@ -73,7 +78,7 @@ instance Show Hidato where
             all_cells = DL.sort $ mcells_list ++ ucells_list
             table = DL.groupBy (\(a,_) (b,_) -> fst a == fst b) all_cells
         in 
-            U.tableToString $ map (fill_from 1) table
+            tableToString $ map (fill_from 1) table
         where
             fill_from _ [] = []
             fill_from i l@((c, p) : xs)

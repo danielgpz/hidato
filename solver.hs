@@ -1,7 +1,7 @@
 import qualified System.Environment as SE
 import qualified Control.Monad as CM
 import qualified Data.Time as DT
-import qualified Game.Hidato as GH
+import Game.Hidato(Hidato, solveHidato)
 
 getLines :: IO [String]
 getLines =
@@ -35,13 +35,13 @@ getInput =
 main = 
     do
         lines <- getInput
-        let hidato = (read lines) :: GH.Hidato
+        let hidato = (read lines) :: Hidato
 
         putStrLn $ "Solving Hidato...\n"
         stime <- DT.getCurrentTime
         
-        -- let sols = [head (GH.solveHidato hidato)]
-        let sols = (GH.solveHidato hidato)
+        -- let sols = [head (solveHidato hidato)]
+        let sols = solveHidato hidato
         CM.mapM print sols
         
         
