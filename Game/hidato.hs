@@ -2,7 +2,7 @@ module Game.Hidato(Hidato, fromList, solveHidato) where
 import qualified Data.IntMap as IM
 import qualified Data.Set as DS
 import qualified Data.List as DL
-import Game.Utils(stringToTable, tableToString, Cell, InfoCell, MarkedCell, cellDistance, Direction, getNeighbours, genDirections)
+import Game.Utils(stringToTable, tableToString, Cell, InfoCell, MarkedCell, cellDistance, Direction(..), getNeighbours, genDirections)
 
 --A Hidato table, ocupied cells with numbers, free cells to be set, and the starting and ending numbers. 
 data Hidato = Hid { mcells :: (IM.IntMap Cell), ucells :: (DS.Set Cell), start :: MarkedCell, end :: MarkedCell }
@@ -40,20 +40,17 @@ markCell cell (Hid mcells ucells start end) mc = case mc of
 --         dist = cellDistance cell c
 
 --Solver function, a trivial backtrack thats travel all posibles paths
-solveHidato' :: [Direction] -> Hidato -> [Hidato]
-solveHidato' _ h 
+solveHidato :: Hidato -> [Hidato]
+solveHidato h 
     | start h == end h = [h]
-solveHidato' (dir:dirs) h = concatMap backtrack . getNeighbours dir $ cell
+solveHidato h = concatMap backtrack . getNeighbours N $ cell
     where
         (pos, cell)  = start $ h
         mc = IM.lookup (succ pos) (mcells h)
         -- Just mc = IM.lookupGE (succ pos) (mcells h)
         backtrack c = case markCell c h mc of
-            Just h' -> solveHidato' dirs h'
+            Just h' -> solveHidato h'
             Nothing -> []
-
-solveHidato :: Hidato -> [Hidato]
-solveHidato = solveHidato' (genDirections 3461178)
 
 --Making Hidato friend of class Read for set custom read
 instance Read Hidato where

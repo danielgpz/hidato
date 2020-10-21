@@ -1,7 +1,9 @@
 import qualified System.Environment as SE
+import System.Random(getStdGen)
 import qualified Control.Monad as CM
 import qualified Data.Time as DT
 import Game.Hidato(Hidato, solveHidato)
+import Game.Utils(genDirections)
 
 getLines :: IO [String]
 getLines =
@@ -34,6 +36,9 @@ getInput =
 
 main = 
     do
+        -- gen <- getStdGen
+        -- print $ take 30 (genDirections gen)
+        
         lines <- getInput
         let hidato = (read lines) :: Hidato
 
