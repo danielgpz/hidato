@@ -1,11 +1,10 @@
-import qualified System.Environment as SE
+import System.Environment(getArgs)
 import System.Random(getStdGen)
-import qualified Control.Monad as CM
-import qualified Data.Time as DT
+import Control.Monad(mapM)
+import Data.Time(getCurrentTime, utctDayTime)
 import Game.Hidato(Hidato, solveHidato)
-import Game.Utils(genDirections)
 
-getLines :: IO [String]
+getLines :: IO String
 getLines =
     do
         line <- getLine
@@ -13,45 +12,33 @@ getLines =
             return []
         else do
             lines <- getLines
-            return (line:lines)
-
-getLines2 :: IO String
-getLines2 =
-    do
-        line <- getLine
-        if null line then
-            return []
-        else do
-            lines <- getLines2
             return (line ++ '\n':lines)
 
 getInput :: IO String
 getInput =
     do
-        args <- SE.getArgs
+        args <- getArgs
         case args of
-            []      -> getLines2
+            []      -> getLines
             (arg:_) -> readFile arg
 
-
 main = 
-    do
-        -- gen <- getStdGen
-        -- print $ take 30 (genDirections gen)
-        
-        lines <- getInput
-        let hidato = (read lines) :: Hidato
+    do  
+        input <- getInput
+        let hidato = (read input) :: Hidato
+
+        putStrLn $ "Loaded Hidato:\n\n" ++ show hidato      
 
         putStrLn $ "Solving Hidato...\n"
-        stime <- DT.getCurrentTime
+        stime <- getCurrentTime
         
         -- let sols = [head (solveHidato hidato)]
         let sols = solveHidato hidato
-        CM.mapM print sols
+        mapM print sols
         
         
-        etime <- DT.getCurrentTime
-        let dtime = (DT.utctDayTime etime) - (DT.utctDayTime stime)
+        etime <- getCurrentTime
+        let dtime = (utctDayTime etime) - (utctDayTime stime)
         putStrLn $ "Found " ++ show (length sols) ++ " solution(s) in " ++ show dtime
         
-        getLine
+        -- getLine
