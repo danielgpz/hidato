@@ -52,13 +52,17 @@ genDirections = randomRs (N, NW)
 
 
 --Shape type, for store a generic shape of a table
-data Shape = Rectangle Int Int | Pyramid Int | Stairs Int deriving(Show, Read)
+data Shape = Rectangle Int Int | Pyramid Int | Stairs Int | Circle Int deriving(Show, Read)
 
 --Generates all cells of a generic shape
 createShape :: Shape -> [Cell]
 createShape (Rectangle n m) = [(i, if odd i then j else m + 1 - j) | i <- [1..n], j <- [1..m]]
 createShape (Pyramid n) = concat [[(i, if odd i then j else 2 * n - j) | j <- take (2 * i - 1) [(n + 1 - i)..]] | i <- [1..n]]
 createShape (Stairs n) = concat [[(i, if odd i then j else i + 1 - j) | j <- [1..i]] | i <- [1..n]]
+createShape (Circle n) = [(i, if odd i then j else m + 1 - j) | i <- [1..m], j <- [1..m], hypo i j]
+    where
+        m = 2 * n + 1
+        hypo a b = (a - n - 1)^2 + (b - n - 1)^2 < n^2
 
 backBite :: (Eq a) => [a] -> a -> [a]
 backBite l x = 
@@ -90,7 +94,7 @@ genShape gen shape =
             Rectangle n m -> (n * m) ^ 2
             Pyramid n     -> (n * n) ^ 2
             Stairs n      -> (div (n * n + n) 2) ^ 2
-            _             -> 0
+            Circle n      -> (n * n) ^ 2
 
 --Funtions to read and show formatted tables
 stringToTable :: String -> [[String]]

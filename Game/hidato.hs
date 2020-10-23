@@ -6,7 +6,7 @@ import Data.List(sort, groupBy)
 import Game.Table(stringToTable, tableToString, Cell, InfoCell, MarkedCell, cellDistance, Direction, getNeighbours, Shape, genShape)
 
 --A Hidato table, ocupied cells with numbers and free cells to be set. 
-data Hidato = Hid { mcells :: IM.IntMap Cell, ucells :: DS.Set Cell, current :: MarkedCell, next :: Maybe MarkedCell }
+data Hidato = Hid { mcells :: IM.IntMap Cell, ucells :: DS.Set Cell, next :: Maybe MarkedCell }
 
 --Creates a Hidato from a List with cell's cordenates and his possible numbers
 fromList :: [(InfoCell)] -> Hidato
@@ -14,24 +14,26 @@ fromList cells =
     let
         mcells = IM.fromList [(v, c) | (Just v, c) <- cells]
         ucells = DS.fromList [c | (Nothing, c) <- cells]
-        Just current = IM.lookupMin mcells
-        next = IM.lookupGT (fst current) mcells
-    in Hid mcells ucells current next
+        next = IM.lookupMin mcells
+    in Hid mcells ucells next
 
 -- Just move on to the next cell and mark it, return all sub-solutions if move was legal
 markCell :: Hidato -> Int -> Cell -> [Hidato]
-markCell (Hid mcells ucells current (Just next@(nextp, nextc))) p c 
-    | next == mcell                      = solveHidato $ Hid mcells ucells mcell (IM.lookupGT p mcells)
-    | cellDistance nextc c > (nextp - p) = []
-    | DS.member c ucells                 = solveHidato $ Hid (IM.insert p c mcells) (DS.delete c ucells) mcell (Just next)
-    | otherwise                          = []
-    where mcell = (p, c)
+markCell (Hid mcells ucells (Just next)) p c 
+    | next == (p, c)               = backTrack p c $ Hid mcells ucells (IM.lookupGT p mcells)
+    | cellDistance nc c > (np - p) = []
+    | DS.member c ucells           = backTrack p c $ Hid (IM.insert p c mcells) (DS.delete c ucells) (Just next)
+    | otherwise                    = []
+    where (np, nc) = next
 
 --Solver function, a trivial backtrack thats travel all posibles paths
+backTrack :: Int -> Cell -> Hidato -> [Hidato]
+backTrack p c h = case next h of
+    Nothing -> [h]
+    _       -> concatMap (markCell h (p + 1)) (getNeighbours minBound c)
+
 solveHidato :: Hidato -> [Hidato]
-solveHidato h@(Hid _ _ _ Nothing) = [h]
-solveHidato h = concatMap (markCell h (p + 1)) (getNeighbours minBound cell)
-    where (p, cell) = current h
+solveHidato h = let Just (p, c) = next h in markCell h p c
 
 --Check if hidato has unique solution
 uniqueSolution :: Hidato -> Bool
@@ -42,22 +44,19 @@ uniqueSolution h =
         _   -> False
 
 --Try hide une cell, if we lose unique condition, return the same hidato
-hideCell :: Hidato -> Int -> Hidato
-hideCell hid@(Hid mcells ucells start end) pos
+hideCell :: Hidato -> InfoCell -> Hidato
+hideCell hid@(Hid mcells ucells next) (Just pos, cell)
     | uniqueSolution nhid = nhid
     | otherwise           = hid
-    where
-        Just cell = IM.lookup pos mcells
-        nhid = Hid (IM.delete pos mcells) (DS.insert cell ucells) start end
+    where nhid = Hid (IM.delete pos mcells) (DS.insert cell ucells) next
 
 --Generator funtion, starting with a fully solved hidato, try hide each cell only if unique condition holds
 genHidato :: StdGen -> Shape -> Hidato
-genHidato gen shape = foldl hideCell hid [(s + 1) .. (e - 1)]
+genHidato gen shape = foldl hideCell hid cells
     where
         table = genShape gen shape
         hid = fromList table
-        s = fst . current $ hid
-        Just (e, _) = IM.lookupMax . mcells $ hid
+        cells = init . tail $ table
 
 --Making Hidato friend of class Read for set custom read
 instance Read Hidato where
@@ -75,7 +74,7 @@ instance Read Hidato where
 
 --Making Hidato friend of class Show for set custom show
 instance Show Hidato where
-    show (Hid mcells ucells start end) = 
+    show (Hid mcells ucells next) = 
         let
             mcells_list = map (\(p, c) -> (c, Just p)) (IM.toList mcells)
             ucells_list = map (\c -> (c, Nothing)) (DS.toList ucells)

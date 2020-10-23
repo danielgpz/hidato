@@ -32,7 +32,6 @@ main =
         putStrLn $ "Solving Hidato...\n"
         stime <- getCurrentTime
         
-        -- let sols = [head (solveHidato hidato)]
         let sols = solveHidato hidato
         mapM print sols
         
@@ -40,5 +39,3 @@ main =
         etime <- getCurrentTime
         let dtime = (utctDayTime etime) - (utctDayTime stime)
         putStrLn $ "Found " ++ show (length sols) ++ " solution(s) in " ++ show dtime
-        
-        -- getLine
