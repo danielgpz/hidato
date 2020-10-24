@@ -3,13 +3,17 @@ import qualified Data.IntMap as IM
 import qualified Data.Set as DS
 import System.Random(StdGen)
 import Data.List(sort, groupBy)
-import Game.Table(stringToTable, tableToString, Cell, InfoCell, MarkedCell, cellDistance, Direction, getNeighbours, Shape, genShape)
+import Game.Table(stringToTable, tableToString, Cell, cellDistance, getNeighbours, Shape, genShape)
+
+--Cells storing data
+type InfoCell = (Maybe Int, Cell)
+type MarkedCell = (Int, Cell)
 
 --A Hidato table, ocupied cells with numbers and free cells to be set. 
 data Hidato = Hid { mcells :: IM.IntMap Cell, ucells :: DS.Set Cell, next :: Maybe MarkedCell }
 
 --Creates a Hidato from a List with cell's cordenates and his possible numbers
-fromList :: [(InfoCell)] -> Hidato
+fromList :: [InfoCell] -> Hidato
 fromList cells =
     let
         mcells = IM.fromList [(v, c) | (Just v, c) <- cells]
@@ -44,8 +48,8 @@ uniqueSolution h =
         _   -> False
 
 --Try hide une cell, if we lose unique condition, return the same hidato
-hideCell :: Hidato -> InfoCell -> Hidato
-hideCell hid@(Hid mcells ucells next) (Just pos, cell)
+hideCell :: Hidato -> MarkedCell -> Hidato
+hideCell hid@(Hid mcells ucells next) (pos, cell)
     | uniqueSolution nhid = nhid
     | otherwise           = hid
     where nhid = Hid (IM.delete pos mcells) (DS.insert cell ucells) next
@@ -55,8 +59,8 @@ genHidato :: StdGen -> Shape -> Hidato
 genHidato gen shape = foldl hideCell hid cells
     where
         table = genShape gen shape
-        hid = fromList table
-        cells = init . tail $ table
+        hid = fromList $ zipWith (\p c -> (Just p, c)) [1..] table
+        cells = init . tail $ zipWith (,) [1..] table
 
 --Making Hidato friend of class Read for set custom read
 instance Read Hidato where

@@ -1,5 +1,5 @@
-module Game.Table(stringToTable, tableToString, Cell, InfoCell, MarkedCell, cellDistance, 
-    Direction(..), moveOnDirection, getNeighbours, genDirections, Shape(..), genShape) where
+module Game.Table(stringToTable, tableToString, Cell, cellDistance, Direction(..), moveOnDirection, 
+    getNeighbours, genDirections, Shape(..), area, createShape, genShape) where
 
 import Data.List(words, unwords, lines, unlines, find)
 import Data.Set(Set, member, fromList)
@@ -7,8 +7,6 @@ import System.Random(Random, random, randomR, randomRs, StdGen)
 
 --A cell, just a pair of Int
 type Cell = (Int, Int)
-type InfoCell = (Maybe Int, Cell)
-type MarkedCell = (Int, Cell)
 
 cellDistance :: Cell -> Cell -> Int
 cellDistance (x, y) (v, w) = max (abs(x - v)) (abs(y - w))
@@ -54,6 +52,12 @@ genDirections = randomRs (N, NW)
 --Shape type, for store a generic shape of a table
 data Shape = Rectangle Int Int | Pyramid Int | Stairs Int | Circle Int deriving(Show, Read)
 
+area :: Shape -> Int
+area (Rectangle n m) = n * m
+area (Pyramid n)     = n * n
+area (Stairs n)      = div (n * n + n) 2
+area (Circle n)      = 3 * n * n
+
 --Generates all cells of a generic shape
 createShape :: Shape -> [Cell]
 createShape (Rectangle n m) = [(i, if odd i then j else m + 1 - j) | i <- [1..n], j <- [1..m]]
@@ -85,17 +89,9 @@ randomizeTable :: [Cell] -> [Direction] -> [Cell]
 randomizeTable cells = foldl (randomizePath (fromList cells)) cells
 
 --Creates the trivial path, and randomize it using k(based on shape's dimensions) steps. Finally enums the path
-genShape :: StdGen -> Shape -> [InfoCell]
-genShape gen shape = 
-    let rtable = randomizeTable (createShape shape) $ take k (genDirections gen)
-    in zipWith (\c p -> (Just p, c)) rtable [1..]
-    where
-        k = case shape of 
-            Rectangle n m -> (n * m) ^ 2
-            Pyramid n     -> (n * n) ^ 2
-            Stairs n      -> (div (n * n + n) 2) ^ 2
-            Circle n      -> (n * n) ^ 2
-
+genShape :: StdGen -> Shape -> [Cell]
+genShape gen shape = randomizeTable (createShape shape) $ take ((area shape)^2) (genDirections gen)
+            
 --Funtions to read and show formatted tables
 stringToTable :: String -> [[String]]
 stringToTable = map words . lines
